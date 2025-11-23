@@ -267,6 +267,3 @@ def honeypot(address, port, username, password):
             ssh_honeypot_thread.start()
         except Exception as error:
             print(error)
-
-
-honeypot('127.0.0.1', 2223, username=None, password=None)
