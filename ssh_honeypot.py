@@ -3,7 +3,6 @@ import logging
 from logging.handlers import RotatingFileHandler
 import socket  # create servers and clients that communicate via tcp or udp
 import paramiko
-import socket
 import threading
 
 # Constants
@@ -269,4 +268,4 @@ def honeypot(address, port, username, password):
             print(error)
 
 
-honeypot('127.0.0.1', 2223, username=None, password=None)
+#honeypot('127.0.0.1', 2223, username=None, password=None)
