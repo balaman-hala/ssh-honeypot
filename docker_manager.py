@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-"""
-MANAGES REAL DOCKER CONTAINERS FOR HONEYPOT
-"""
+
 import os
 import time
 import json

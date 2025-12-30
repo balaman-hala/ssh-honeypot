@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-"""
-SSH LOGGER - Logs all SSH attempts in JSON format
-"""
+
 import subprocess
 import re
 import json

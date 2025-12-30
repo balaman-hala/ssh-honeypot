@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-"""
-MONITORS REAL ATTACKS ON DOCKER CONTAINERS - NO SIMULATION
-"""
+
 import os
 import json
 import time

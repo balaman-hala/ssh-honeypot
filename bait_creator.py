@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-CREATES BAIT FILES FOR REAL HONEYPOTS
-"""
+
 import os
 import json
 from datetime import datetime

@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-"""
-MAIN CONTROLLER FOR REAL DOCKER HONEYPOT - REAL ATTACK DETECTION
-"""
+
 import argparse
 import sys
 import time

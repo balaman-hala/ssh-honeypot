@@ -9,7 +9,6 @@ RUN echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
 RUN echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config
 RUN ssh-keygen -A
 
-# THIS IS THE KEY: Create a script that prints EVERYTHING
 RUN echo '#!/bin/bash' > /start.sh
 RUN echo 'echo "SSH Honeypot Started - All attempts will be logged"' >> /start.sh
 RUN echo '/usr/sbin/sshd -D -e 2>&1 | while read line; do' >> /start.sh
