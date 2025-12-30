@@ -1,0 +1,21 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y openssh-server sudo
+RUN useradd -m -s /bin/bash admin && echo "admin:password123" | chpasswd
+RUN echo "root:toor" | chpasswd
+RUN mkdir /var/run/sshd
+RUN echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+RUN echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+RUN echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config
+RUN ssh-keygen -A
+
+# THIS IS THE KEY: Create a script that prints EVERYTHING
+RUN echo '#!/bin/bash' > /start.sh
+RUN echo 'echo "SSH Honeypot Started - All attempts will be logged"' >> /start.sh
+RUN echo '/usr/sbin/sshd -D -e 2>&1 | while read line; do' >> /start.sh
+RUN echo '  echo "$line"' >> /start.sh  # This sends SSH output to Docker logs
+RUN echo 'done' >> /start.sh
+RUN chmod +x /start.sh
+
+EXPOSE 22
+CMD ["/start.sh"]

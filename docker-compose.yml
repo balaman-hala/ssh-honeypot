@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  ssh-honeypot:
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.ssh
+    container_name: real-ssh-honeypot
+    ports:
+      - "2222:22"
+    volumes:
+      - ./bait_files:/home/admin/bait:ro
+    restart: unless-stopped
+
+  wordpress-honeypot:
+    image: wordpress:latest
+    container_name: real-wordpress-honeypot
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: mysql-honeypot
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress123
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - ./bait_files/wordpress:/var/www/html/wp-content/uploads/bait:ro
+    depends_on:
+      - mysql-honeypot
+    restart: unless-stopped
+
+  mysql-honeypot:
+    image: mysql:8.0
+    container_name: real-mysql-honeypot
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress123
+    restart: unless-stopped

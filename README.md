@@ -1,181 +1,112 @@
-# Honeypot Project
-
-A multi-service honeypot that simulates SSH and WordPress admin login pages to capture and log intrusion attempts.
-
-## Features
-
-- **SSH Honeypot**: Fake SSH server with interactive shell emulation
-- **HTTP Honeypot**: Fake WordPress admin login page
-- **Comprehensive Logging**: All connection attempts and credentials logged
-- **Customizable Credentials**: Set custom usernames and passwords
-- **Realistic Responses**: Emulates real system behavior
-
-## Quick Start
-
-### Prerequisites
-- Python 3.6+
-- Required packages: `paramiko`, `flask`
-
-### Installation
-
-1. **Clone or download the project files**
-2. **Install dependencies** (if not already installed):
-   ```bash
-   pip3 install --user paramiko flask
-   ```
-
-3. **One-time setup**:
-   ```bash
-   # Generate SSH server key
-   ssh-keygen -t rsa -f server.key -N "" -q
-   
-   # Create templates directory
-   mkdir -p templates
-   
-   # Move HTML file to templates (if needed)
-   mv wp-admin.html templates/
-   ```
-
-## Usage
-
-### Running SSH Honeypot
-
-**Basic usage (localhost):**
-```bash
-python3 honeypot.py -a 127.0.0.1 -p 2222 --ssh
-```
-
-**Network accessible:**
-```bash
-python3 honeypot.py -a 0.0.0.0 -p 2222 --ssh
-```
-
-**With custom credentials:**
-```bash
-python3 honeypot.py -a 0.0.0.0 -p 2222 -u admin -pw password123 --ssh
-```
-
-### Running HTTP Honeypot
-
-**Basic usage (localhost):**
-```bash
-python3 honeypot.py -a 127.0.0.1 -p 8080 --http
-```
-
-**Network accessible:**
-```bash
-python3 honeypot.py -a 0.0.0.0 -p 8080 --http
-```
-
-**With custom credentials:**
-```bash
-python3 honeypot.py -a 0.0.0.0 -p 8080 -u wpadmin -pw P@ssw0rd --http
-```
-
-### Testing Your Honeypots
-
-**Test SSH Honeypot:**
-```bash
-ssh test@127.0.0.1 -p 2222
-```
-- Use any username/password combination
-- Try commands: `help`, `ls`, `whoami`, `pwd`, `exit`
-
-**Test HTTP Honeypot:**
-1. Open web browser
-2. Navigate to: `http://127.0.0.1:8080`
-3. Try logging in with default credentials: `admin` / `password`
-
-## Command Line Options
-
-| Option | Description | Example |
-|--------|-------------|---------|
-| `-a, --address` | IP address to bind to | `-a 0.0.0.0` |
-| `-p, --port` | Port to listen on | `-p 2222` |
-| `-u, --username` | Custom username | `-u admin` |
-| `-pw, --password` | Custom password | `-pw secret` |
-| `-s, --ssh` | Run SSH honeypot | `--ssh` |
-| `-w, --http` | Run HTTP honeypot | `--http` |
-
-## Log Files
-
-The honeypot creates three log files:
-
-- **`system.log`**: SSH connection attempts and authentication logs
-- **`cmd_system.log`**: SSH command execution logs  
-- **`http_system.log`**: HTTP login attempts with credentials
-
-**View logs in real-time:**
-```bash
-tail -f system.log      # SSH connections
-tail -f cmd_system.log  # SSH commands
-tail -f http_system.log # HTTP logins
-```
-
-## File Structure
-```
-honeypot-project/
-├── honeypot.py          # Main launcher script
-├── ssh_honeypot.py      # SSH honeypot implementation
-├── web_honeypot.py      # HTTP honeypot implementation
-├── server.key           # SSH host key (generated)
-├── templates/
-│   └── wp-admin.html    # WordPress login page template
-├── system.log           # SSH logs (auto-generated)
-├── cmd_system.log       # Command logs (auto-generated)
-└── http_system.log      # HTTP logs (auto-generated)
-```
-
-## Examples
-
-**Capture SSH attacks on standard port:**
-```bash
-sudo python3 honeypot.py -a 0.0.0.0 -p 22 --ssh
-```
-
-**Capture WordPress login attempts:**
-```bash
-python3 honeypot.py -a 0.0.0.0 -p 80 -u administrator -pw "P@ssw0rd123" --http
-```
-
-**Run both services simultaneously:**
-- Terminal 1: `python3 honeypot.py -a 0.0.0.0 -p 2222 --ssh`
-- Terminal 2: `python3 honeypot.py -a 0.0.0.0 -p 8080 --http`
-
-## Security Notes
-
-⚠️ **Important Security Warnings:**
-
-- Only run on isolated networks or dedicated monitoring systems
-- Do not run on production systems with sensitive data
-- The honeypot accepts all SSH connections - ensure proper firewall rules
-- Log files may contain sensitive attacker data - handle appropriately
-- Using privileged ports (below 1024) requires root access
-
-## Troubleshooting
-
-**"404 Not Found" for HTTP honeypot:**
-- Ensure `wp-admin.html` is in the `templates/` directory
-- Run from the directory containing `honeypot.py`
-
-**"Module not found" errors:**
-- Install required packages: `pip3 install --user paramiko flask`
-
-**"Permission denied" on port 22/80:**
-- Use `sudo` for privileged ports, or use higher ports (2222, 8080, etc.)
-
-**SSH key generation issues:**
-- Manually generate: `ssh-keygen -t rsa -f server.key -N ""`
-
-## Stopping the Honeypot
-
-Press `Ctrl + C` in the terminal where the honeypot is running.
-
-## Legal and Ethical Use
-
-- Only deploy on networks you own or have explicit permission to monitor
-- Compliance with local laws and regulations is required
-- Use responsibly for security research and education only
-
----
-
+echo "# 🚨 Docker Honeypot System" > README.md
+echo "" >> README.md
+echo "A real honeypot system that detects and logs SSH brute-force attacks using Docker containers." >> README.md
+echo "" >> README.md
+echo "## 📋 Features" >> README.md
+echo "- ✅ **Real SSH Honeypot** - Detects actual attack attempts" >> README.md
+echo "- ✅ **Real-time Dashboard** - Shows attacks as they happen" >> README.md
+echo "- ✅ **JSON Logging** - All attacks saved in structured format" >> README.md
+echo "- ✅ **Statistics** - Attack counts, unique IPs, trends" >> README.md
+echo "- ✅ **Bait Files** - Fake credentials to attract attackers" >> README.md
+echo "" >> README.md
+echo "## 🚀 Quick Start" >> README.md
+echo "" >> README.md
+echo "### 1. Install Dependencies" >> README.md
+echo '`bash' >> README.md
+echo "pip install docker" >> README.md
+echo '`' >> README.md
+echo "" >> README.md
+echo "### 2. Start All Honeypots" >> README.md
+echo '`bash' >> README.md
+echo "python main.py --all" >> README.md
+echo '`' >> README.md
+echo "" >> README.md
+echo "### 3. View Real-time Dashboard" >> README.md
+echo '`bash' >> README.md
+echo "python main.py --dashboard" >> README.md
+echo '`' >> README.md
+echo "" >> README.md
+echo "## 🔧 Manual Testing" >> README.md
+echo "" >> README.md
+echo "### Test SSH Honeypot (use WRONG password):" >> README.md
+echo '`bash' >> README.md
+echo "ssh admin@localhost -p 2222" >> README.md
+echo "# Password: password123 (use wrong password like 'wrong123')" >> README.md
+echo '`' >> README.md
+echo "" >> README.md
+echo "### Test Web Honeypot:" >> README.md
+echo '`bash' >> README.md
+echo "curl http://localhost:8080" >> README.md
+echo "curl http://localhost:8080/wp-login.php" >> README.md
+echo '`' >> README.md
+echo "" >> README.md
+echo "## 📊 Commands" >> README.md
+echo "" >> README.md
+echo "| Command | Description |" >> README.md
+echo "|---------|-------------|" >> README.md
+echo "| `python main.py --all` | Start all honeypots |" >> README.md
+echo "| `python main.py --ssh` | Start only SSH honeypot |" >> README.md
+echo "| `python main.py --web` | Start only WordPress honeypot |" >> README.md
+echo "| `python main.py --dashboard` | Show real-time attack dashboard |" >> README.md
+echo "| `python main.py --monitor` | Start background attack monitoring |" >> README.md
+echo "| `python main.py --report` | Generate attack report |" >> README.md
+echo "" >> README.md
+echo "## 📁 Project Structure" >> README.md
+echo "" >> README.md
+echo "`" >> README.md
+echo "honeypot/" >> README.md
+echo "├── main.py              # Main controller" >> README.md
+echo "├── docker_manager.py    # Docker container management" >> README.md
+echo "├── attack_monitor.py    # Attack detection and logging" >> README.md
+echo "├── bait_creator.py      # Create fake credentials/files" >> README.md
+echo "├── containers/          # Docker configurations" >> README.md
+echo "│   ├── Dockerfile.ssh   # SSH honeypot image" >> README.md
+echo "│   └── ssh_logger.py    # SSH attack logger" >> README.md
+echo "├── logs/                # Attack logs (auto-created)" >> README.md
+echo "│   ├── all_attacks.json # All attacks in JSON format" >> README.md
+echo "│   ├── ssh_attacks.json # SSH-specific attacks" >> README.md
+echo "│   ├── web_attacks.json # Web-specific attacks" >> README.md
+echo "│   └── final_report.json# Generated reports" >> README.md
+echo "└── bait_files/          # Fake files to attract attackers" >> README.md
+echo "`" >> README.md
+echo "" >> README.md
+echo "## 🐳 Docker Containers" >> README.md
+echo "" >> README.md
+echo "| Container | Port | Description |" >> README.md
+echo "|-----------|------|-------------|" >> README.md
+echo "| `real-ssh-honeypot` | 2222 | SSH server with logging |" >> README.md
+echo "| `real-wordpress-honeypot` | 8080 | WordPress site |" >> README.md
+echo "| `real-mysql-honeypot` | 3306 | MySQL database |" >> README.md
+echo "" >> README.md
+echo "## 📈 What It Detects" >> README.md
+echo "" >> README.md
+echo "### SSH Attacks:" >> README.md
+echo "- Failed password attempts" >> README.md
+echo "- Invalid user attempts" >> README.md
+echo "- Connection attempts" >> README.md
+echo "" >> README.md
+echo "### Web Attacks:" >> README.md
+echo "- WordPress login attempts" >> README.md
+echo "- Suspicious paths (wp-admin, config files)" >> README.md
+echo "- Error responses" >> README.md
+echo "" >> README.md
+echo "## ⚠️ Important Notes" >> README.md
+echo "" >> README.md
+echo "1. **This is a REAL honeypot** - it will log actual attack attempts" >> README.md
+echo "2. **Use on isolated network** - exposing to internet will attract real attackers" >> README.md
+echo "3. **Test with wrong passwords** - use 'wrong123' not the real password" >> README.md
+echo "4. **Attacks may appear automatically** - background scans are normal" >> README.md
+echo "" >> README.md
+echo "## 🛠️ Troubleshooting" >> README.md
+echo "" >> README.md
+echo "**Issue:** No attacks detected" >> README.md
+echo "**Solution:** Test manually: \`ssh admin@localhost -p 2222\` (use wrong password)" >> README.md
+echo "" >> README.md
+echo "**Issue:** Docker not available" >> README.md
+echo "**Solution:** Install Docker Desktop and run: \`pip install docker\`" >> README.md
+echo "" >> README.md
+echo "**Issue:** Dashboard shows 0 attacks" >> README.md
+echo "**Solution:** Attacks appear in real-time. Wait or trigger test attack." >> README.md
+echo "" >> README.md
+echo "## 📄 License" >> README.md
+echo "Educational project for security research" >> README.md
