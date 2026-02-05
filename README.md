@@ -1,4 +1,3 @@
-````markdown
 ### 🛡️ SSH Honeypot System
 
 A specialized Docker-based SSH honeypot designed to detect, log, and analyze SSH brute-force attacks and unauthorized access attempts. Perfect for security monitoring and threat intelligence collection.
@@ -22,7 +21,6 @@ pip install docker
 # Verify Docker is running
 docker --version
 ```
-````
 
 ### Start SSH Honeypot
 
