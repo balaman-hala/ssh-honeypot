@@ -147,5 +147,5 @@ Educational Use - Security Research Tool
 
 ```
 
-This version focuses exclusively on the SSH honeypot component, with all web/WordPress references removed. It provides clear SSH-specific deployment, testing, and monitoring instructions while maintaining a professional security tool documentation style.
+This version focuses exclusively on the SSH honeypot component. It provides clear SSH-specific deployment, testing, and monitoring instructions while maintaining a professional security tool documentation style.
 ```
