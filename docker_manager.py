@@ -129,6 +129,7 @@ ssh.wait()
         with open('containers/ssh_logger.py', 'w') as f:
             f.write(ssh_logger)
 
+        # In docker_manager.py, update the dockerfile content:
         dockerfile = '''FROM ubuntu:22.04
 
 # Install SSH and Python
@@ -136,7 +137,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     openssh-server \
     sudo \
     python3 \
-    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # Create user
@@ -164,7 +164,7 @@ RUN ssh-keygen -A
 
 EXPOSE 22
 
-# Start with our logger
+# Start with our logger (NOT /start.sh)
 CMD ["python3", "/ssh_logger.py"]
 '''
 
@@ -236,90 +236,6 @@ CMD ["python3", "/ssh_logger.py"]
             print(f"[!] Failed to start SSH container: {e}")
             return None
 
-    def start_wordpress_container(self):
-        """Start REAL WordPress honeypot container"""
-        if not self.docker_available:
-            print("[!] Docker not available")
-            return None
-
-        try:
-            # Clean up old containers
-            for name in ['real-wordpress-honeypot', 'real-mysql-honeypot']:
-                try:
-                    old = self.client.containers.get(name)
-                    old.stop()
-                    old.remove()
-                    print(f"[*] Removed old {name}")
-                except:
-                    pass
-
-            # Start MySQL
-            print("[*] Starting MySQL container...")
-            mysql = self.client.containers.run(
-                'mysql:8.0',
-                detach=True,
-                name='real-mysql-honeypot',
-                environment={
-                    'MYSQL_ROOT_PASSWORD': 'rootpassword',
-                    'MYSQL_DATABASE': 'wordpress',
-                    'MYSQL_USER': 'wordpress',
-                    'MYSQL_PASSWORD': 'wordpress123'
-                },
-                restart_policy={'Name': 'unless-stopped'}
-            )
-            self.containers['mysql'] = mysql
-            print(f"[+] MySQL started: {mysql.id[:12]}")
-
-            # Wait for MySQL
-            time.sleep(10)
-
-            # Start WordPress with access logging
-            print("[*] Starting WordPress container...")
-
-            # Create custom entrypoint for WordPress to log access
-            wp_entrypoint = '''#!/bin/bash
-# Start Apache with custom log format
-echo "LogFormat \\"{\\"timestamp\\":\\"%t\\",\\"ip\\":\\"%a\\",\\"method\\":\\"%r\\",\\"status\\":\\"%>s\\",\\"user_agent\\":\\"%{User-agent}i\\"}\\" json" > /etc/apache2/apache2.conf
-echo 'CustomLog /proc/self/fd/1 json' >> /etc/apache2/apache2.conf
-
-# Start Apache in foreground
-exec apache2-foreground
-'''
-
-            # Start container
-            wp = self.client.containers.run(
-                'wordpress:latest',
-                detach=True,
-                name='real-wordpress-honeypot',
-                ports={'80/tcp': 8080},
-                environment={
-                    'WORDPRESS_DB_HOST': 'real-mysql-honeypot',
-                    'WORDPRESS_DB_USER': 'wordpress',
-                    'WORDPRESS_DB_PASSWORD': 'wordpress123',
-                    'WORDPRESS_DB_NAME': 'wordpress',
-                    'WORDPRESS_CONFIG_EXTRA': "define('WP_DEBUG', true);"
-                },
-                restart_policy={'Name': 'unless-stopped'},
-                volumes={
-                    os.path.abspath('bait_files/wordpress'): {
-                        'bind': '/var/www/html/wp-content/uploads/bait',
-                        'mode': 'ro'
-                    }
-                }
-            )
-
-            self.containers['wordpress'] = wp
-            print(f"[+] WordPress started: {wp.id[:12]}")
-            print(f"[+] Web port: 8080")
-            print(f"[+] URL: http://localhost:8080")
-            print(f"[+] Login: http://localhost:8080/wp-login.php")
-
-            return wp
-
-        except Exception as e:
-            print(f"[!] Failed to start WordPress: {e}")
-            return None
-
     def get_container_by_name(self, name):
         """Get container by name"""
         if not self.docker_available:
@@ -369,9 +285,7 @@ exec apache2-foreground
         print("\n[*] Cleaning up containers...")
 
         containers_to_remove = [
-            'real-ssh-honeypot',
-            'real-wordpress-honeypot',
-            'real-mysql-honeypot'
+            'real-ssh-honeypot'
         ]
 
         for name in containers_to_remove:

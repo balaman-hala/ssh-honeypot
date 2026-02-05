@@ -1,9 +1,9 @@
-
 import subprocess
 import re
 import json
-import sys
+import os
 from datetime import datetime
+import threading
 
 
 def log_attack(ip, username, status):
@@ -13,20 +13,14 @@ def log_attack(ip, username, status):
         "service": "ssh",
         "ip": ip,
         "username": username,
-        "password": "[attempted]",
         "status": status,
         "type": "ssh_auth"
     }
     # Print JSON to stdout (captured by Docker)
     print(json.dumps(attack), flush=True)
 
-    # Also write to file inside container
-    with open("/var/log/ssh_attacks.log", "a") as f:
-        f.write(json.dumps(attack) + "\n")
-
 
 print("[SSH Logger] Starting SSH server with attack logging...", flush=True)
-print("[SSH Logger] All login attempts will be logged!", flush=True)
 
 # Start SSH with debug mode
 ssh = subprocess.Popen(
@@ -76,4 +70,34 @@ for line in iter(ssh.stdout.readline, ''):
                 ip = ip_match.group(1)
                 print(f"[SUCCESS] Login successful: {ip}", flush=True)
 
+
+def watch_command_logs():
+    """Watch for new command log files"""
+    log_dir = "/var/log/ssh_sessions/"
+
+    while True:
+        try:
+            # Check for new log files
+            for file in os.listdir(log_dir):
+                if file.endswith('.log'):
+                    filepath = os.path.join(log_dir, file)
+                    # Read and broadcast new content
+                    with open(filepath, 'r') as f:
+                        content = f.read()
+                        if content:
+                            event = {
+                                "timestamp": datetime.now().isoformat(),
+                                "type": "shell_command",
+                                "content": content[-500:],  # Last 500 chars
+                                "logfile": file
+                            }
+                            print(json.dumps(event), flush=True)
+        except:
+            pass
+
+        time.sleep(5)
+
+
+# Start watching in background
+threading.Thread(target=watch_command_logs, daemon=True).start()
 ssh.wait()

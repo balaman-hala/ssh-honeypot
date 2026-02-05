@@ -1,0 +1,379 @@
+
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }}</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      .ip-cell {
+        font-family: "Courier New", monospace;
+      }
+      .ssh-badge {
+        background-color: #4ecdc4;
+      }
+      .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+      .country-flag {
+        width: 20px;
+        height: 15px;
+        display: inline-block;
+        margin-right: 5px;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+          <i class="fas fa-shield-alt me-2"></i>
+          SSH Honeypot Dashboard
+        </a>
+        <div class="navbar-nav">
+          <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
+          <a class="nav-link active" href="{{ url_for('attacks') }}">Attacks</a>
+          <a class="nav-link" href="{{ url_for('live') }}">Live</a>
+          <a class="nav-link" href="{{ url_for('stats') }}">Stats</a>
+          <a class="nav-link" href="{{ url_for('alerts_view') }}">Alerts</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+              <i class="fas fa-history me-2"></i>
+              Attack Log (Last 24 Hours)
+            </h4>
+            <div>
+              <span class="badge bg-info me-2">Total: {{ total }}</span>
+              <span class="badge bg-secondary"
+                >Page {{ page }} of {{ (total/per_page)|round(0, 'ceil')|int
+                }}</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover table-dark mb-0">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>IP Address</th>
+                  <th>Location</th>
+                  <th>Service</th>
+                  <th>Target</th>
+                  <th>Details</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for attack in attacks %}
+                <tr>
+                  <td>
+                    <small>{{ attack.timestamp[:19].replace('T', ' ') }}</small>
+                  </td>
+                  <td class="ip-cell">
+                    <code>{{ attack.ip }}</code>
+                    {% if attack.reputation.abuse_score > 50 %}
+                    <span
+                      class="badge bg-danger ms-1"
+                      title="Abuse Score: {{ attack.reputation.abuse_score }}"
+                    >
+                      {{ attack.reputation.abuse_score }}
+                    </span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if attack.location.country != 'Unknown' %}
+                    <span
+                      class="country-flag"
+                      {% set colors = ['ff6b6b', '4ecdc4', '45b7d1', '96ceb4'] %}
+                      {% set color_index = loop.index0 % 4 %}
+                      style="background-color: #{{ colors[color_index] }}"
+                    ></span>
+                    {{ attack.location.country }} {% if attack.location.city !=
+                    'Unknown' %}
+                    <small class="text-muted"
+                      >({{ attack.location.city }})</small
+                    >
+                    {% endif %} {% else %}
+                    <span class="text-muted">Unknown</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge ssh-badge">
+                      <i class="fas fa-terminal me-1"></i> SSH
+                    </span>
+                  </td>
+                  <td>
+                    {% if attack.username %}
+                    <code>{{ attack.username }}</code>
+                    {% if attack.password %}
+                    <small class="text-muted"
+                      >:{{ attack.password[:20] }}{% if attack.password|length >
+                      20 %}...{% endif %}</small
+                    >
+                    {% endif %} {% else %}
+                    <span class="text-muted">scan</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <small>
+                      SSH Brute-force attempt
+                    </small>
+                  </td>
+                  <td>
+                    <button
+                      class="btn btn-sm btn-outline-info"
+                      onclick="showAttackDetails('{{ attack.ip }}')"
+                    >
+                      <i class="fas fa-search"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-warning"
+                      onclick="blockIP('{{ attack.ip }}')"
+                    >
+                      <i class="fas fa-ban"></i>
+                    </button>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="7" class="text-center py-5">
+                    <i class="fas fa-shield fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">
+                      No SSH attacks recorded in the last 24 hours
+                    </p>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {% if total > per_page %}
+        <div class="card-footer">
+          <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center mb-0">
+              {% if page > 1 %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page-1 }}">Previous</a>
+              </li>
+              {% endif %} {% for p in range(1, (total/per_page)|round(0,
+              'ceil')|int + 1) %} {% if p >= page-2 and p <= page+2 %}
+              <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+              </li>
+              {% endif %} {% endfor %} {% if page < (total/per_page)|round(0,
+              'ceil')|int %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page+1 }}">Next</a>
+              </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Filters -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <label class="form-label">Time Range</label>
+              <select class="form-select" id="filter-time">
+                <option value="1">Last Hour</option>
+                <option value="24" selected>Last 24 Hours</option>
+                <option value="168">Last 7 Days</option>
+                <option value="720">Last 30 Days</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">IP Address</label>
+              <input
+                type="text"
+                class="form-control"
+                id="filter-ip"
+                placeholder="Filter by IP..."
+              />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Username</label>
+              <input
+                type="text"
+                class="form-control"
+                id="filter-username"
+                placeholder="Filter by username..."
+              />
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-12 d-flex justify-content-end">
+              <button class="btn btn-primary" onclick="applyFilters()">
+                <i class="fas fa-search me-1"></i> Apply Filters
+              </button>
+              <button class="btn btn-outline-secondary ms-2" onclick="resetFilters()">
+                <i class="fas fa-redo me-1"></i> Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attack Details Modal -->
+    <div class="modal fade" id="attackDetailsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+          <div class="modal-header">
+            <h5 class="modal-title">Attack Details</h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body" id="attackDetailsContent">
+            <!-- Content will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function showAttackDetails(ip) {
+        fetch(`/api/ip/${ip}`)
+          .then((response) => response.json())
+          .then((data) => {
+            const content = document.getElementById("attackDetailsContent");
+            content.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>IP Information</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><th>IP:</th><td><code>${data.ip}</code></td></tr>
+                                    <tr><th>Location:</th><td>${data.location.city}, ${data.location.country}</td></tr>
+                                    <tr><th>ISP:</th><td>${data.location.isp}</td></tr>
+                                    <tr><th>ASN:</th><td>${data.location.asn}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Threat Intelligence</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><th>Abuse Score:</th><td><span class="badge ${data.reputation.abuse_score > 50 ? "bg-danger" : "bg-warning"}">${data.reputation.abuse_score}</span></td></tr>
+                                    <tr><th>Malicious:</th><td>${data.reputation.is_malicious ? "Yes" : "No"}</td></tr>
+                                    <tr><th>Sources:</th><td>${data.reputation.sources_checked.join(", ") || "None"}</td></tr>
+                                    <tr><th>Total Attacks:</th><td>${data.attack_count}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <h6 class="mt-4">Recent SSH Attacks from this IP</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Username</th>
+                                        <th>Password Attempted</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.attacks
+                                      .map(
+                                        (attack) => `
+                                        <tr>
+                                            <td><small>${attack.timestamp?.substring(11, 19) || ''}</small></td>
+                                            <td><code>${attack.username || 'scan'}</code></td>
+                                            <td>${attack.password ? '<code>' + (attack.password.length > 20 ? attack.password.substring(0, 20) + '...' : attack.password) + '</code>' : 'No'}</td>
+                                        </tr>
+                                    `,
+                                      )
+                                      .join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+
+            const modal = new bootstrap.Modal(
+              document.getElementById("attackDetailsModal"),
+            );
+            modal.show();
+          });
+      }
+
+      function blockIP(ip) {
+        if (
+          confirm(
+            `Block IP ${ip}? This will add firewall rules to block this IP.`,
+          )
+        ) {
+          fetch("/api/block-ip", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ip: ip }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                alert(`IP ${ip} has been blocked.`);
+              } else {
+                alert("Failed to block IP.");
+              }
+            });
+        }
+      }
+
+      function applyFilters() {
+        const time = document.getElementById("filter-time").value;
+        const ip = document.getElementById("filter-ip").value;
+        const username = document.getElementById("filter-username").value;
+
+        let url = `?page=1`;
+        if (time !== "24") url += `&time=${time}`;
+        if (ip) url += `&ip=${ip}`;
+        if (username) url += `&username=${username}`;
+
+        window.location.href = url;
+      }
+
+      function resetFilters() {
+        window.location.href = '?page=1';
+      }
+
+      // Set filter values from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      document.getElementById("filter-time").value =
+        urlParams.get("time") || "24";
+      document.getElementById("filter-ip").value = urlParams.get("ip") || "";
+      document.getElementById("filter-username").value = urlParams.get("username") || "";
+    </script>
+  </body>
+</html>

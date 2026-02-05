@@ -1,125 +1,153 @@
-# 🚨 Docker Honeypot System
+````markdown
+# 🛡️ SSH Honeypot System
 
-A real honeypot system that detects and logs SSH brute-force attacks using Docker containers.
+A specialized Docker-based SSH honeypot designed to detect, log, and analyze SSH brute-force attacks and unauthorized access attempts. Perfect for security monitoring and threat intelligence collection.
 
-## 📋 Features
+## ✨ Core Features
 
-- ✅ **Real SSH Honeypot** - Detects actual attack attempts
-- ✅ **Real-time Dashboard** - Shows attacks as they happen
-- ✅ **JSON Logging** - All attacks saved in structured format
-- ✅ **Statistics** - Attack counts, unique IPs, trends
-- ✅ **Bait Files** - Fake credentials to attract attackers
+- **🔍 SSH-Specific Detection** - Focused exclusively on SSH attack patterns
+- **📊 Real-time Monitoring** - Live visualization of SSH attack attempts
+- **🗃️ Comprehensive Logging** - JSON-formatted logs with attack metadata
+- **🎣 Credential Baiting** - Realistic fake user accounts and passwords
+- **📈 Attack Analytics** - IP tracking, frequency analysis, timing patterns
 
-## 🚀 Quick Start
+## 🚀 Quick Deployment
 
-### 1. Install Dependencies
+### Prerequisites
 
 ```bash
+# Install required Python package
 pip install docker
-```
 
-### 2. Start All Honeypots
+# Verify Docker is running
+docker --version
+```
+````
+
+### Start SSH Honeypot
 
 ```bash
-python main.py --all
+# Deploy the SSH honeypot container
+python main.py --ssh
+
+# Alternative: Start with real-time dashboard
+python main.py --ssh --dashboard
 ```
 
-### 3. View Real-time Dashboard
+## 🧪 Testing the Honeypot
+
+### Simulate Attack Attempt
 
 ```bash
-python main.py --dashboard
-```
-
-## 🔧 Manual Testing
-
-### Test SSH Honeypot (use WRONG password):
-
-```bash
+# Attempt SSH connection with incorrect credentials
 ssh admin@localhost -p 2222
-# Password: password123 (use wrong password like 'wrong123')
+Password: wrong123  # Use incorrect password to trigger logging
+
+# Alternative test with different username
+ssh root@localhost -p 2222
 ```
 
-### Test Web Honeypot:
+### Quick Test Command
 
 ```bash
-curl http://localhost:8080
-curl http://localhost:8080/wp-login.php
+# Single line test (will fail as expected)
+ssh -o ConnectTimeout=5 admin@localhost -p 2222
 ```
 
-## 📊 Commands
+## 📋 Command Reference
 
-| Command                      | Description                        |
-| ---------------------------- | ---------------------------------- |
-| `python main.py --all`       | Start all honeypots                |
-| `python main.py --ssh`       | Start only SSH honeypot            |
-| `python main.py --web`       | Start only WordPress honeypot      |
-| `python main.py --dashboard` | Show real-time attack dashboard    |
-| `python main.py --monitor`   | Start background attack monitoring |
-| `python main.py --report`    | Generate attack report             |
+| Command                      | Action            | Description                  |
+| ---------------------------- | ----------------- | ---------------------------- |
+| `python main.py --ssh`       | 🚀 **Deploy**     | Start SSH honeypot container |
+| `python main.py --dashboard` | 📊 **Monitor**    | Launch attack dashboard      |
+| `python main.py --monitor`   | 👁️ **Background** | Start background monitoring  |
+| `python main.py --report`    | 📄 **Analyze**    | Generate attack report       |
 
-## 📁 Project Structure
+## 📁 Project Structure (SSH Focus)
 
 ```
 honeypot/
 ├── main.py              # Main controller
 ├── docker_manager.py    # Docker container management
-├── attack_monitor.py    # Attack detection and logging
-├── bait_creator.py      # Create fake credentials/files
-├── containers/          # Docker configurations
+├── attack_monitor.py    # SSH attack detection
+├── bait_creator.py      # Fake SSH credentials
+├── containers/
 │   ├── Dockerfile.ssh   # SSH honeypot image
-│   └── ssh_logger.py    # SSH attack logger
-├── logs/                # Attack logs (auto-created)
-│   ├── all_attacks.json # All attacks in JSON format
-│   ├── ssh_attacks.json # SSH-specific attacks
-│   ├── web_attacks.json # Web-specific attacks
-│   └── final_report.json# Generated reports
-└── bait_files/          # Fake files to attract attackers
+│   └── ssh_logger.py    # SSH-specific logging
+└── logs/
+    ├── ssh_attacks.json # All SSH attack logs
+    └── final_report.json# Analysis reports
 ```
 
-## 🐳 Docker Containers
+## 🐳 Docker Container
 
-| Container                 | Port | Description             |
-| ------------------------- | ---- | ----------------------- |
-| `real-ssh-honeypot`       | 2222 | SSH server with logging |
-| `real-wordpress-honeypot` | 8080 | WordPress site          |
-| `real-mysql-honeypot`     | 3306 | MySQL database          |
+| Container      | Port | Purpose              | Exposed Service |
+| -------------- | ---- | -------------------- | --------------- |
+| `ssh-honeypot` | 2222 | SSH attack detection | OpenSSH Server  |
 
-## 📈 What It Detects
+## 🔍 Detection Capabilities
 
-### SSH Attacks:
+### SSH-Specific Attack Patterns:
 
-- Failed password attempts
-- Invalid user attempts
-- Connection attempts
+- **Brute-force attempts** - Multiple password guesses
+- **Invalid users** - Non-existent username attempts
+- **Connection flooding** - Rapid connection attempts
+- **Protocol anomalies** - Non-standard SSH client behavior
+- **Credential stuffing** - Common credential combinations
 
-### Web Attacks:
+## ⚠️ Security Notes
 
-- WordPress login attempts
-- Suspicious paths (wp-admin, config files)
-- Error responses
-
-## ⚠️ Important Notes
-
-1. **This is a REAL honeypot** - it will log actual attack attempts
-2. **Use on isolated network** - exposing to internet will attract real attackers
-3. **Test with wrong passwords** - use 'wrong123' not the real password
-4. **Attacks may appear automatically** - background scans are normal
+1. **Real Attack Surface** - This exposes a real SSH service
+2. **Network Isolation Recommended** - Use on isolated/VLAN networks
+3. **Monitoring Required** - Always monitor logs for suspicious activity
+4. **Legal Compliance** - Ensure honeypot use complies with local laws
 
 ## 🛠️ Troubleshooting
 
-**Issue:** No attacks detected  
-**Solution:** Test manually: `ssh admin@localhost -p 2222` (use wrong password)
+**No attacks detected?**
 
-**Issue:** Docker not available  
-**Solution:** Install Docker Desktop and run: `pip install docker`
+```bash
+# Trigger a test attack
+ssh -o BatchMode=yes -o ConnectTimeout=3 admin@localhost -p 2222
+```
 
-**Issue:** Dashboard shows 0 attacks  
-**Solution:** Attacks appear in real-time. Wait or trigger test attack.
+**Container won't start?**
+
+```bash
+# Check Docker service
+docker ps
+sudo systemctl restart docker
+
+# Check port availability
+netstat -tulpn | grep :2222
+```
+
+**Logs not updating?**
+
+```bash
+# Check container logs
+docker logs ssh-honeypot
+
+# Verify log directory permissions
+ls -la logs/
+```
+
+## 📊 Expected Output
+
+Successful deployment shows:
+
+```
+✅ SSH Honeypot started on port 2222
+📊 Dashboard available at http://localhost:8888
+📝 Logging to: logs/ssh_attacks.json
+🔒 Listening for SSH attacks...
+```
 
 ## 📄 License
 
-Educational project for security research
+Educational Use - Security Research Tool
 
 ```
 
+This version focuses exclusively on the SSH honeypot component, with all web/WordPress references removed. It provides clear SSH-specific deployment, testing, and monitoring instructions while maintaining a professional security tool documentation style.
 ```

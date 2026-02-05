@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }} - Live SSH Stream</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      body {
+        background-color: #0d1117;
+        color: #c9d1d9;
+      }
+      .attack-log {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        font-family: "Courier New", monospace;
+      }
+      .log-entry {
+        border-bottom: 1px solid #30363d;
+        padding: 0.75rem;
+      }
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+      .ssh-attack {
+        border-left: 4px solid #4ecdc4;
+      }
+      .timestamp {
+        color: #8b949e;
+        font-size: 0.8rem;
+      }
+      .ip-address {
+        color: #58a6ff;
+        font-weight: bold;
+      }
+      .username {
+        color: #7ee787;
+      }
+      .password {
+        color: #ff7b72;
+      }
+      .stats-card {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 1px solid #30363d;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+          <i class="fas fa-terminal"></i> {{ title }} - Live SSH Stream
+        </a>
+        <div class="d-flex">
+          <a href="/" class="btn btn-outline-light me-2">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+          </a>
+          <a href="/attacks" class="btn btn-outline-light me-2">
+            <i class="fas fa-history"></i> Attacks
+          </a>
+          <a href="/stats" class="btn btn-outline-light me-2">
+            <i class="fas fa-chart-bar"></i> Stats
+          </a>
+          <a href="/alerts" class="btn btn-outline-light me-2">
+            <i class="fas fa-bell"></i> Alerts
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card bg-dark border-secondary">
+            <div class="card-header bg-dark border-secondary">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-white">
+                  <i class="fas fa-stream"></i> Live SSH Attack Stream
+                </h5>
+                <div>
+                  <span class="badge bg-danger me-2" id="attack-count">0</span>
+                  <span class="badge bg-primary" id="unique-ips-count">0</span>
+                </div>
+              </div>
+            </div>
+            <div
+              class="card-body attack-log p-0"
+              style="height: 600px; overflow-y: auto"
+            >
+              <div id="live-attacks">
+                <div class="text-center text-muted py-5">
+                  <i class="fas fa-satellite-dish fa-3x mb-3"></i><br />
+                  Listening for SSH brute-force attempts...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <!-- Real-time Stats -->
+          <div class="card stats-card mb-3">
+            <div class="card-header bg-dark border-secondary">
+              <h6 class="mb-0">
+                <i class="fas fa-chart-line"></i> Real-time Stats
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row text-center">
+                <div class="col-6 mb-3">
+                  <div class="p-3 bg-dark rounded">
+                    <i class="fas fa-bolt fa-2x text-warning"></i>
+                    <h4 class="mt-2 mb-0" id="total-attacks">0</h4>
+                    <small>Total SSH Attacks</small>
+                  </div>
+                </div>
+                <div class="col-6 mb-3">
+                  <div class="p-3 bg-dark rounded">
+                    <i class="fas fa-network-wired fa-2x text-primary"></i>
+                    <h4 class="mt-2 mb-0" id="unique-ips">0</h4>
+                    <small>Unique IPs</small>
+                  </div>
+                </div>
+                <div class="col-6 mb-3">
+                  <div class="p-3 bg-dark rounded">
+                    <i class="fas fa-user fa-2x text-info"></i>
+                    <h4 class="mt-2 mb-0" id="common-usernames">0</h4>
+                    <small>Usernames Tried</small>
+                  </div>
+                </div>
+                <div class="col-6 mb-3">
+                  <div class="p-3 bg-dark rounded">
+                    <i class="fas fa-flag fa-2x text-success"></i>
+                    <h4 class="mt-2 mb-0" id="countries">0</h4>
+                    <small>Countries</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Attackers -->
+          <div class="card stats-card">
+            <div class="card-header bg-dark border-secondary">
+              <h6 class="mb-0">
+                <i class="fas fa-user-secret"></i> Recent Attackers
+              </h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush" id="recent-ips">
+                <div class="text-muted text-center py-3">No attackers yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script>
+      const socket = io();
+      let attackCount = 0;
+      let uniqueIPs = new Set();
+      let recentAttackers = [];
+
+      socket.on("recent_attacks", function (attacks) {
+        updateLiveStream(attacks);
+      });
+
+      socket.on("stats_update", function (stats) {
+        updateStats(stats);
+      });
+
+      function updateLiveStream(attacks) {
+        const container = document.getElementById("live-attacks");
+
+        // Remove initial message if this is the first attack
+        if (attackCount === 0 && attacks.length > 0) {
+          container.innerHTML = "";
+        }
+
+        attacks.reverse().forEach((attack) => {
+          if (attack.ip) {
+            uniqueIPs.add(attack.ip);
+
+            // Update recent attackers list
+            if (!recentAttackers.some((a) => a.ip === attack.ip)) {
+              recentAttackers.unshift({
+                ip: attack.ip,
+                timestamp: attack.timestamp,
+                username: attack.username,
+              });
+
+              // Keep only last 10 attackers
+              if (recentAttackers.length > 10) {
+                recentAttackers.pop();
+              }
+            }
+          }
+
+          const logEntry = document.createElement("div");
+          logEntry.className = "log-entry ssh-attack";
+
+          const time = new Date(attack.timestamp).toLocaleTimeString();
+          const username = attack.username || "unknown";
+          const password = attack.password
+            ? attack.password.substring(0, 30) +
+              (attack.password.length > 30 ? "..." : "")
+            : null;
+
+          logEntry.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <span class="ip-address">${attack.ip || "Unknown IP"}</span>
+                            <span class="badge bg-info ms-2">SSH</span>
+                        </div>
+                        <div class="timestamp">${time}</div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="username">User: ${username}</span>
+                        ${password ? `<br><span class="password">Pass: ${password}</span>` : ""}
+                    </div>
+                `;
+
+          container.insertBefore(logEntry, container.firstChild);
+        });
+
+        attackCount += attacks.length;
+        updateCounters();
+        updateRecentAttackers();
+
+        // Keep only last 50 entries
+        const entries = container.querySelectorAll(".log-entry");
+        if (entries.length > 50) {
+          for (let i = 50; i < entries.length; i++) {
+            entries[i].remove();
+          }
+        }
+      }
+
+      function updateStats(stats) {
+        if (!stats || !stats.basic) return;
+
+        document.getElementById("total-attacks").textContent =
+          stats.basic.total_attacks || 0;
+      }
+
+      function updateCounters() {
+        document.getElementById("attack-count").textContent = attackCount;
+        document.getElementById("unique-ips").textContent = uniqueIPs.size;
+        document.getElementById("unique-ips-count").textContent =
+          uniqueIPs.size;
+
+        // Update other counters
+        document.getElementById("common-usernames").textContent = "N/A";
+        document.getElementById("countries").textContent = "N/A";
+      }
+
+      function updateRecentAttackers() {
+        const container = document.getElementById("recent-ips");
+        container.innerHTML = "";
+
+        if (recentAttackers.length === 0) {
+          container.innerHTML =
+            '<div class="text-muted text-center py-3">No attackers yet</div>';
+          return;
+        }
+
+        recentAttackers.forEach((attacker) => {
+          const time = new Date(attacker.timestamp).toLocaleTimeString();
+          const item = document.createElement("div");
+          item.className = "list-group-item bg-dark border-secondary";
+          item.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <code class="text-primary">${attacker.ip}</code><br>
+                            <small class="text-muted">${attacker.username || "unknown"}</small>
+                        </div>
+                        <small class="timestamp">${time}</small>
+                    </div>
+                `;
+          container.appendChild(item);
+        });
+      }
+
+      // Auto-scroll to bottom
+      const logContainer = document.querySelector(".attack-log");
+      const observer = new MutationObserver(() => {
+        logContainer.scrollTop = 0; // Scroll to top for newest entries
+      });
+      observer.observe(logContainer, { childList: true, subtree: true });
+    </script>
+  </body>
+</html>

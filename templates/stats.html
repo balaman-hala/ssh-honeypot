@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSH Attack Statistics - Honeypot Dashboard</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      .stat-card {
+        transition: transform 0.2s;
+        height: 100%;
+      }
+      .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .chart-container {
+        height: 300px;
+        position: relative;
+      }
+      .progress {
+        height: 25px;
+      }
+      .country-flag {
+        width: 24px;
+        height: 16px;
+        margin-right: 10px;
+      }
+      .timeline {
+        position: relative;
+        padding-left: 30px;
+      }
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #0d6efd, transparent);
+      }
+      .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+      }
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -30px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #0d6efd;
+        border: 2px solid #212529;
+      }
+      .icon-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+          <i class="fas fa-shield-alt me-2"></i>
+          SSH Honeypot Dashboard
+        </a>
+        <div class="navbar-nav">
+          <a class="nav-link" href="{{ url_for('index') }}">
+            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+          </a>
+          <a class="nav-link" href="{{ url_for('attacks') }}">
+            <i class="fas fa-list me-1"></i> Attacks
+          </a>
+          <a class="nav-link" href="{{ url_for('live') }}">
+            <i class="fas fa-bolt me-1"></i> Live
+          </a>
+          <a class="nav-link active" href="{{ url_for('stats') }}">
+            <i class="fas fa-chart-bar me-1"></i> Stats
+          </a>
+          <a class="nav-link" href="{{ url_for('alerts_view') }}">
+            <i class="fas fa-bell me-1"></i> Alerts
+          </a>
+          <a class="nav-link" href="{{ url_for('export') }}">
+            <i class="fas fa-download me-1"></i> Export
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+      <!-- Page Header -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h1 class="h3 mb-0">
+                <i class="fas fa-chart-bar text-primary me-2"></i>SSH Attack
+                Statistics
+              </h1>
+              <p class="text-muted mb-0">
+                Comprehensive analysis of SSH brute-force attempts
+              </p>
+            </div>
+            <div>
+              <select class="form-select w-auto d-inline-block" id="timeRange">
+                <option value="1">Last 24 Hours</option>
+                <option value="7" selected>Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+                <option value="0">All Time</option>
+              </select>
+              <button
+                class="btn btn-outline-primary ms-2"
+                onclick="refreshStats()"
+              >
+                <i class="fas fa-sync-alt"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card stat-card border-start border-primary border-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h6 class="text-uppercase text-muted">Total SSH Attacks</h6>
+                  <h2 class="mb-0" id="totalAttacks">0</h2>
+                  <p class="text-muted mb-0">
+                    <span id="attackTrend" class="badge bg-success">0%</span> vs
+                    previous period
+                  </p>
+                </div>
+                <div class="icon-circle bg-primary">
+                  <i class="fas fa-terminal text-white"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card stat-card border-start border-danger border-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h6 class="text-uppercase text-muted">Active Attackers</h6>
+                  <h2 class="mb-0" id="uniqueAttackers">0</h2>
+                  <p class="text-muted mb-0">
+                    <span id="topCountry" class="badge bg-secondary">N/A</span>
+                    most common
+                  </p>
+                </div>
+                <div class="icon-circle bg-danger">
+                  <i class="fas fa-user-secret text-white"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card stat-card border-start border-warning border-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h6 class="text-uppercase text-muted">Common Usernames</h6>
+                  <h2 class="mb-0" id="commonUsernames">0</h2>
+                  <div class="progress mt-2">
+                    <div
+                      id="usernameProgress"
+                      class="progress-bar bg-warning"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                </div>
+                <div class="icon-circle bg-warning">
+                  <i class="fas fa-user text-white"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card stat-card border-start border-success border-4">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h6 class="text-uppercase text-muted">Attack Frequency</h6>
+                  <h2 class="mb-0" id="attackFrequency">0/min</h2>
+                  <p class="text-muted mb-0">
+                    <span id="peakHour" class="badge bg-info">00:00</span>
+                    peak time
+                  </p>
+                </div>
+                <div class="icon-circle bg-success">
+                  <i class="fas fa-clock text-white"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="row mb-4">
+        <!-- Attack Timeline Chart -->
+        <div class="col-lg-8 mb-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-chart-line me-2"></i>SSH Attack Timeline
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Countries Chart -->
+        <div class="col-lg-4 mb-4">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-globe-americas me-2"></i>Top Attack Countries
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas id="countriesChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Statistics -->
+      <div class="row">
+        <!-- Top Attackers -->
+        <div class="col-lg-6 mb-4">
+          <div class="card h-100">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <h5 class="mb-0">
+                <i class="fas fa-users me-2"></i>Top Attackers
+              </h5>
+              <span class="badge bg-primary" id="topAttackerCount">Top 10</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-dark">
+                    <tr>
+                      <th>IP Address</th>
+                      <th>Country</th>
+                      <th>Attacks</th>
+                      <th>Last Seen</th>
+                      <th>Threat</th>
+                    </tr>
+                  </thead>
+                  <tbody id="topAttackersTable">
+                    <tr>
+                      <td colspan="5" class="text-center py-4">
+                        <div
+                          class="spinner-border spinner-border-sm text-primary me-2"
+                        ></div>
+                        Loading attacker data...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Common Usernames -->
+        <div class="col-lg-6 mb-4">
+          <div class="card h-100">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <h5 class="mb-0">
+                <i class="fas fa-key me-2"></i>Common Usernames
+              </h5>
+              <span class="badge bg-warning">Top Attempted</span>
+            </div>
+            <div class="card-body">
+              <div class="timeline" id="usernamesList">
+                <div class="text-center py-4">
+                  <div
+                    class="spinner-border spinner-border-sm text-primary me-2"
+                  ></div>
+                  Loading username data...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geographical Distribution -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-map-marked-alt me-2"></i>Geographical
+                Distribution
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-lg-8">
+                  <div class="chart-container">
+                    <canvas id="geoChart"></canvas>
+                  </div>
+                </div>
+                <div class="col-lg-4">
+                  <h6 class="mb-3">Top Countries</h6>
+                  <div id="countriesList">
+                    <div class="d-flex justify-content-between mb-2">
+                      <div>
+                        <span class="placeholder col-6"></span>
+                      </div>
+                      <span class="placeholder col-2"></span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                      <div>
+                        <span class="placeholder col-5"></span>
+                      </div>
+                      <span class="placeholder col-2"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hourly Analysis -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-clock me-2"></i>Hourly Analysis
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <div class="card bg-dark">
+                    <div class="card-body text-center">
+                      <h6 class="text-muted">Peak Attack Hour</h6>
+                      <h2 id="peakHour">00:00</h2>
+                      <p class="text-muted mb-0">
+                        Most attacks occurred at this time
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <div class="card bg-dark">
+                    <div class="card-body text-center">
+                      <h6 class="text-muted">Average Attacks/Hour</h6>
+                      <h2 id="avgHourly">0</h2>
+                      <p class="text-muted mb-0">Across selected period</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <div class="card bg-dark">
+                    <div class="card-body text-center">
+                      <h6 class="text-muted">Attack Frequency</h6>
+                      <h2 id="attackFreq">0/min</h2>
+                      <p class="text-muted mb-0">
+                        Average time between attacks
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="hourlyChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-5 py-3 bg-dark text-center">
+      <div class="container">
+        <p class="mb-0 text-muted">
+          <small>
+            <i class="fas fa-shield-alt me-1"></i>
+            SSH Honeypot Dashboard • Last Updated:
+            <span id="lastUpdated">{{ last_updated }}</span> •
+            <button
+              class="btn btn-sm btn-link text-decoration-none p-0"
+              onclick="refreshStats()"
+            >
+              Refresh Now
+            </button>
+          </small>
+        </p>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Global variables
+      let timelineChart, countriesChart, geoChart, hourlyChart;
+      let currentTimeRange = 7; // 7 days by default
+
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        loadStats();
+        setInterval(loadStats, 30000); // Refresh every 30 seconds
+
+        // Time range selector
+        document
+          .getElementById("timeRange")
+          .addEventListener("change", function (e) {
+            currentTimeRange = parseInt(e.target.value);
+            loadStats();
+          });
+      });
+
+      // Load statistics
+      async function loadStats() {
+        try {
+          const response = await fetch(`/api/stats?days=${currentTimeRange}`);
+          const data = await response.json();
+          updateDashboard(data);
+          updateLastUpdated();
+        } catch (error) {
+          console.error("Error loading stats:", error);
+        }
+      }
+
+      // Update dashboard with new data
+      function updateDashboard(data) {
+        // Update summary cards
+        document.getElementById("totalAttacks").textContent =
+          data.total_attacks.toLocaleString();
+        document.getElementById("uniqueAttackers").textContent =
+          data.unique_attackers.toLocaleString();
+        document.getElementById("commonUsernames").textContent =
+          data.common_usernames?.length || 0;
+        document.getElementById("attackFrequency").textContent =
+          data.hourly?.frequency || "0/min";
+
+        // Update trends and badges
+        if (data.trend) {
+          const trendElement = document.getElementById("attackTrend");
+          trendElement.textContent = `${trend > 0 ? "+" : ""}${data.trend.toFixed(1)}%`;
+          trendElement.className = `badge ${data.trend > 0 ? "bg-danger" : "bg-success"}`;
+        }
+
+        if (data.top_country) {
+          document.getElementById("topCountry").textContent = data.top_country;
+        }
+
+        if (data.hourly?.peak_hour) {
+          document.getElementById("peakHour").textContent =
+            data.hourly.peak_hour;
+        }
+
+        // Update progress bar for username distribution
+        const totalUsernames =
+          data.common_usernames?.reduce((sum, item) => sum + item[1], 0) || 0;
+        if (totalUsernames > 0 && data.common_usernames?.length > 0) {
+          const topUsernameCount = data.common_usernames[0][1];
+          const percentage = (
+            (topUsernameCount / totalUsernames) *
+            100
+          ).toFixed(1);
+          document.getElementById("usernameProgress").style.width =
+            `${percentage}%`;
+          document.getElementById("usernameProgress").textContent =
+            `${percentage}%`;
+        }
+
+        // Update charts if data exists
+        if (data.charts) {
+          updateCharts(data.charts);
+        }
+
+        // Update tables
+        updateTopAttackers(data.top_attackers || []);
+        updateUsernames(data.common_usernames || []);
+        updateCountries(data.countries || []);
+
+        // Update hourly analysis
+        updateHourlyAnalysis(data.hourly || {});
+      }
+
+      // Update charts
+      function updateCharts(chartData) {
+        // Destroy existing charts
+        if (timelineChart) timelineChart.destroy();
+        if (countriesChart) countriesChart.destroy();
+        if (geoChart) geoChart.destroy();
+        if (hourlyChart) hourlyChart.destroy();
+
+        // Timeline Chart
+        const timelineCtx = document
+          .getElementById("timelineChart")
+          .getContext("2d");
+        timelineChart = new Chart(timelineCtx, {
+          type: "line",
+          data: {
+            labels: chartData.timeline_labels || [],
+            datasets: [
+              {
+                label: "SSH Attacks",
+                data: chartData.timeline_ssh || [],
+                borderColor: "rgb(78, 205, 196)",
+                backgroundColor: "rgba(78, 205, 196, 0.1)",
+                tension: 0.4,
+                fill: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "top",
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1,
+                },
+              },
+            },
+          },
+        });
+
+        // Countries Chart
+        const countriesCtx = document
+          .getElementById("countriesChart")
+          .getContext("2d");
+        countriesChart = new Chart(countriesCtx, {
+          type: "doughnut",
+          data: {
+            labels: chartData.countries_labels || [],
+            datasets: [
+              {
+                data: chartData.countries_data || [],
+                backgroundColor: [
+                  "rgba(255, 99, 132, 0.8)",
+                  "rgba(54, 162, 235, 0.8)",
+                  "rgba(255, 206, 86, 0.8)",
+                  "rgba(75, 192, 192, 0.8)",
+                  "rgba(153, 102, 255, 0.8)",
+                ],
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+              },
+            },
+          },
+        });
+
+        // Hourly Chart
+        const hourlyCtx = document
+          .getElementById("hourlyChart")
+          .getContext("2d");
+        hourlyChart = new Chart(hourlyCtx, {
+          type: "bar",
+          data: {
+            labels:
+              chartData.hourly_labels ||
+              Array.from({ length: 24 }, (_, i) => `${i}:00`),
+            datasets: [
+              {
+                label: "SSH Attacks per Hour",
+                data: chartData.hourly_data || Array(24).fill(0),
+                backgroundColor: "rgba(78, 205, 196, 0.6)",
+                borderColor: "rgba(78, 205, 196, 1)",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      // Update top attackers table
+      function updateTopAttackers(attackers) {
+        const tableBody = document.getElementById("topAttackersTable");
+        tableBody.innerHTML = "";
+
+        if (attackers.length === 0) {
+          tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            No attacker data available
+                        </td>
+                    </tr>
+                `;
+          return;
+        }
+
+        attackers.forEach((attacker, index) => {
+          const row = document.createElement("tr");
+          const threatLevel =
+            attacker.total > 50
+              ? "High"
+              : attacker.total > 20
+                ? "Medium"
+                : "Low";
+          const threatClass =
+            attacker.total > 50
+              ? "danger"
+              : attacker.total > 20
+                ? "warning"
+                : "success";
+
+          row.innerHTML = `
+                    <td>
+                        <span class="badge bg-dark me-1">#${index + 1}</span>
+                        <code>${attacker.ip}</code>
+                    </td>
+                    <td>
+                        <img src="https://flagcdn.com/w20/${attacker.country_code || "xx"}.png" 
+                             class="country-flag" 
+                             title="${attacker.country || "Unknown"}">
+                        ${attacker.country || "Unknown"}
+                    </td>
+                    <td><span class="badge bg-danger">${attacker.total}</span></td>
+                    <td><small class="text-muted">Recently</small></td>
+                    <td><span class="badge bg-${threatClass}">${threatLevel}</span></td>
+                `;
+          tableBody.appendChild(row);
+        });
+
+        document.getElementById("topAttackerCount").textContent =
+          `Top ${attackers.length}`;
+      }
+
+      // Update usernames display
+      function updateUsernames(usernames) {
+        const usernamesList = document.getElementById("usernamesList");
+        usernamesList.innerHTML = "";
+
+        if (usernames.length === 0) {
+          usernamesList.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        No username data available
+                    </div>
+                `;
+          return;
+        }
+
+        usernames.slice(0, 8).forEach((item, index) => {
+          const div = document.createElement("div");
+          div.className = "timeline-item";
+          div.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong><code>${item[0] || "(empty)"}</code></strong>
+                            <small class="text-muted d-block">Attempted ${item[1]} times</small>
+                        </div>
+                        <span class="badge bg-primary">${item[1]}</span>
+                    </div>
+                `;
+          usernamesList.appendChild(div);
+        });
+      }
+
+      // Update countries list
+      function updateCountries(countries) {
+        const countriesList = document.getElementById("countriesList");
+        countriesList.innerHTML = "";
+
+        countries.forEach((country) => {
+          const div = document.createElement("div");
+          div.className =
+            "d-flex justify-content-between align-items-center mb-2";
+          div.innerHTML = `
+                    <div>
+                        <img src="https://flagcdn.com/w20/${country.code || "xx"}.png" 
+                             class="country-flag" 
+                             title="${country.name}">
+                        ${country.name}
+                    </div>
+                    <div>
+                        <span class="badge bg-secondary me-2">${country.count}</span>
+                        <span class="text-muted small">${country.percentage || 0}%</span>
+                    </div>
+                `;
+          countriesList.appendChild(div);
+        });
+      }
+
+      // Update hourly analysis
+      function updateHourlyAnalysis(hourlyData) {
+        if (hourlyData.peak_hour) {
+          document.getElementById("peakHour").textContent =
+            hourlyData.peak_hour;
+        }
+        if (hourlyData.average) {
+          document.getElementById("avgHourly").textContent =
+            hourlyData.average.toFixed(1);
+        }
+        if (hourlyData.frequency) {
+          document.getElementById("attackFreq").textContent =
+            hourlyData.frequency;
+        }
+      }
+
+      // Refresh stats manually
+      function refreshStats() {
+        document.getElementById("lastUpdated").innerHTML = `
+                <span class="spinner-border spinner-border-sm text-primary me-1"></span>
+                Refreshing...
+            `;
+        loadStats();
+      }
+
+      // Update last updated time
+      function updateLastUpdated() {
+        const now = new Date();
+        document.getElementById("lastUpdated").textContent =
+          now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+    </script>
+  </body>
+</html>

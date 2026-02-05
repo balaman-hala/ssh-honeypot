@@ -1,0 +1,4 @@
+Host production
+  HostName 10.0.1.100
+  User root
+  IdentityFile ~/.ssh/id_rsa_production

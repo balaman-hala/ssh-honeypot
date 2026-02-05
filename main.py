@@ -1,4 +1,3 @@
-
 import argparse
 import sys
 import time
@@ -71,68 +70,6 @@ class RealHoneypotController:
             print("[!] Failed to start SSH container")
             return False
 
-    def start_real_wordpress_honeypot(self):
-        """Start REAL WordPress in Docker"""
-        print("\n" + "="*60)
-        print("STARTING REAL WORDPRESS HONEYPOT (Docker Container)")
-        print("="*60)
-
-        # Create bait files
-        self.bait_creator.create_wordpress_bait_files()
-
-        # Start real WordPress container
-        container = self.docker_manager.start_wordpress_container()
-
-        if container:
-            print(f"\n✅ REAL WordPress Honeypot Started!")
-            print(f"   Container: {container.name}")
-            print(f"   URL: http://localhost:8080")
-            print(f"   Login: http://localhost:8080/wp-login.php")
-            print(f"   Username: admin")
-            print(f"   Password: admin123")
-            print(f"   REAL WordPress with MySQL database")
-            print(f"\n⚠️  REAL attacks will be logged automatically!")
-            return True
-        else:
-            print("[!] Failed to start WordPress container")
-            return False
-
-    def start_all_real_honeypots(self):
-        """Start both SSH and WordPress real honeypots"""
-        print("\n" + "="*60)
-        print("STARTING ALL REAL HONEYPOTS (Docker Containers)")
-        print("="*60)
-
-        # Create bait files
-        self.bait_creator.create_ssh_bait_files()
-        self.bait_creator.create_wordpress_bait_files()
-
-        success = True
-
-        # Start SSH
-        if not self.docker_manager.start_ssh_container():
-            print("[!] Failed to start SSH container")
-            success = False
-
-        # Start WordPress
-        if not self.docker_manager.start_wordpress_container():
-            print("[!] Failed to start WordPress container")
-            success = False
-
-        if success:
-            print("\n" + "="*60)
-            print("✅ ALL REAL HONEYPOTS STARTED!")
-            print("="*60)
-            print("\nAccess Points:")
-            print("  SSH: ssh admin@localhost -p 2222")
-            print("       Password: password123")
-            print("  Web: http://localhost:8080")
-            print("       Login: http://localhost:8080/wp-login.php")
-            print("\n⚠️  REAL attacks will be logged automatically!")
-            print("="*60)
-
-        return success
-
     def start_monitoring(self):
         """Start monitoring attacks in background"""
         print("\n" + "="*60)
@@ -175,7 +112,7 @@ class RealHoneypotController:
                     print(f"     Ports: {', '.join(container['ports'])}")
         else:
             print("❌ No honeypot containers running")
-            print("[*] Start with: python main.py --all")
+            print("[*] Start with: python main.py --ssh")
 
         # Show recent attacks
         recent_attacks = self.attack_monitor.get_recent_attacks(minutes=60)
@@ -185,30 +122,26 @@ class RealHoneypotController:
             for attack in recent_attacks[-10:]:  # Last 10 attacks
                 time_str = attack['timestamp'][11:19] if len(
                     attack['timestamp']) > 10 else attack['timestamp']
-                service = "🛡️ SSH" if attack['service'] == 'ssh' else "🌐 WEB"
                 ip = attack.get('ip', 'unknown')
                 username = attack.get('username', '')
                 if username:
-                    print(f"  [{time_str}] {service}: {ip} -> {username}")
+                    print(f"  [{time_str}] SSH: {ip} -> {username}")
                 else:
-                    print(f"  [{time_str}] {service}: {ip}")
+                    print(f"  [{time_str}] SSH: {ip}")
         else:
             print(f"\n👻 No attacks detected yet")
-            print(f"  Try: ssh admin@localhost -p 2222")
-            print(f"  Or: curl http://localhost:8080/wp-login.php")
+            print(f"  Try: ssh admin@localhost -p 2222 (use wrong password)")
 
         # Show statistics
         print("\n📊 STATISTICS:")
         stats = self.attack_monitor.get_stats()
         print(f"  Total Attacks: {stats['total_attacks']}")
         print(f"  SSH Attacks: {stats['ssh_attacks']}")
-        print(f"  Web Attacks: {stats['web_attacks']}")
         print(f"  Unique Attackers: {stats['unique_attackers']}")
         print(f"  Last Updated: {stats['last_updated'][11:19]}")
 
         print("\n💡 TIPS:")
         print("  - Try wrong SSH passwords to test")
-        print("  - Access web interface to test")
         print("  - Attacks appear in real-time")
         print("="*60)
 
@@ -231,8 +164,6 @@ class RealHoneypotController:
 
         # Display report
         print(f"Total Attacks: {report['total_attacks']}")
-        print(f"SSH Attacks: {report['ssh_attacks']}")
-        print(f"Web Attacks: {report['web_attacks']}")
         print(f"Unique Attackers: {report['unique_attackers']}")
         print(f"Recent (1h): {report['recent_hour']}")
 
@@ -240,11 +171,6 @@ class RealHoneypotController:
             print("\n🔝 TOP ATTACKERS:")
             for ip, count in report['top_attackers']:
                 print(f"  {ip}: {count} attacks")
-
-        if report['common_passwords']:
-            print("\n🔑 COMMON PASSWORDS:")
-            for pwd, count in report['common_passwords'][:5]:
-                print(f"  '{pwd}': {count} attempts")
 
         # Save report
         report_file = 'logs/final_report.json'
@@ -258,13 +184,9 @@ class RealHoneypotController:
     def run(self):
         """Main run method"""
         parser = argparse.ArgumentParser(
-            description="Real Docker Honeypot System with REAL Attack Detection")
+            description="SSH Honeypot System with Attack Detection")
         parser.add_argument('--ssh', action='store_true',
-                            help='Start REAL SSH honeypot')
-        parser.add_argument('--web', action='store_true',
-                            help='Start REAL WordPress honeypot')
-        parser.add_argument('--all', action='store_true',
-                            help='Start all REAL honeypots')
+                            help='Start SSH honeypot')
         parser.add_argument('--dashboard', action='store_true',
                             help='Show real-time dashboard')
         parser.add_argument('--monitor', action='store_true',
@@ -277,7 +199,7 @@ class RealHoneypotController:
         args = parser.parse_args()
 
         print("="*60)
-        print("🔥 REAL DOCKER HONEYPOT SYSTEM")
+        print("🔥 SSH HONEYPOT SYSTEM")
         print("DETECTS REAL ATTACKS - NO SIMULATION")
         print("="*60)
 
@@ -293,40 +215,33 @@ class RealHoneypotController:
             self.docker_manager.cleanup_containers()
             return
 
-        # Start services based on arguments
+        # Start SSH if requested
         if args.ssh:
             self.start_real_ssh_honeypot()
-        elif args.web:
-            self.start_real_wordpress_honeypot()
-        elif args.all or not any([args.ssh, args.web, args.dashboard, args.monitor, args.report]):
-            # Default: start everything
-            self.start_all_real_honeypots()
 
-        # Start monitoring
-        if args.monitor or args.all or args.dashboard:
+        # Start monitoring if requested
+        if args.monitor or args.dashboard:
             self.start_monitoring()
 
-        # Show dashboard
-        if args.dashboard or args.all:
+        # Show dashboard if requested
+        if args.dashboard:
             try:
                 self.run_dashboard_loop()
             except KeyboardInterrupt:
                 print("\n[*] Stopping dashboard...")
 
-        # Generate report
+        # Generate report if requested
         if args.report:
             self.generate_report()
 
-        # If nothing else, keep running
-        if not (args.dashboard or args.report):
+        # If only SSH started, keep running
+        if args.ssh and not (args.dashboard or args.report):
             print("\n" + "="*60)
-            print("✅ HONEYPOTS RUNNING!")
+            print("✅ SSH HONEYPOT RUNNING!")
             print("="*60)
             print("\nTest it yourself:")
             print("  SSH: ssh admin@localhost -p 2222")
             print("       (use wrong password to test)")
-            print("  Web: http://localhost:8080")
-            print("       http://localhost:8080/wp-login.php")
             print("\nCommands:")
             print("  Show live dashboard: python main.py --dashboard")
             print("  Generate report: python main.py --report")
@@ -338,11 +253,9 @@ class RealHoneypotController:
                 while True:
                     time.sleep(1)
             except KeyboardInterrupt:
-                print("\n[*] Stopping honeypots...")
-
-        # Generate final report and cleanup
-        self.generate_report()
-        self.docker_manager.cleanup_containers()
+                print("\n[*] Stopping honeypot...")
+                self.generate_report()
+                self.docker_manager.cleanup_containers()
 
 
 if __name__ == "__main__":
