@@ -101,3 +101,4 @@ def watch_command_logs():
 # Start watching in background
 threading.Thread(target=watch_command_logs, daemon=True).start()
 ssh.wait()
+

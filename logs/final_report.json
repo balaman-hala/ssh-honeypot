@@ -1,29 +1,29 @@
 {
-  "total_attacks": 81,
-  "ssh_attacks": 81,
+  "total_attacks": 131,
+  "ssh_attacks": 131,
   "unique_attackers": 1,
   "top_attackers": [
     [
       "172.17.0.1",
-      81
+      131
     ]
   ],
   "common_usernames": [
     [
       "admin",
-      44
+      66
     ],
     [
       "unknown",
-      37
+      65
     ]
   ],
   "attack_types": {
-    "attempted": 58,
-    "successful_login": 10,
+    "attempted": 98,
+    "successful_login": 17,
     "failed_password": 5,
-    "failed": 8
+    "failed": 11
   },
-  "recent_hour": 18,
-  "generated_at": "2026-02-05T01:08:51.399894"
+  "recent_hour": 10,
+  "generated_at": "2026-02-06T14:31:31.003965"
 }

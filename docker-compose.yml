@@ -4,7 +4,7 @@ services:
   ssh-honeypot:
     build:
       context: .
-      dockerfile: containers/Dockerfile.ssh
+      dockerfile: containers/Dockerfile
     container_name: real-ssh-honeypot
     ports:
       - "2222:22"
