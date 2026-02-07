@@ -4,6 +4,7 @@ import json
 import os
 from datetime import datetime
 import threading
+import time
 
 
 def log_attack(ip, username, status):
@@ -32,12 +33,15 @@ ssh = subprocess.Popen(
     universal_newlines=True
 )
 
+print("[DEBUG] SSH process started, waiting for output...", flush=True)
+
+line_count = 0
+
 # Monitor SSH output
 for line in iter(ssh.stdout.readline, ''):
+    line_count += 1
     line = line.strip()
     if line:
-        # Print original for debugging
-        print(f"[SSH] {line}", flush=True)
 
         # Check for failed logins
         if "Failed password" in line:
@@ -65,10 +69,24 @@ for line in iter(ssh.stdout.readline, ''):
                 print(f"[ATTACK] Invalid user: {ip} -> {username}", flush=True)
 
         elif "Accepted password" in line:
+            print(f"[DEBUG] Entering Accepted password block", flush=True)
             ip_match = re.search(r'from (\d+\.\d+\.\d+\.\d+)', line)
-            if ip_match:
-                ip = ip_match.group(1)
+            ip = ip_match.group(1) if ip_match else "unknown"
+            print(f"[DEBUG] IP: {ip}", flush=True)
+
+            username = "authenticated"
+            user_match = re.search(r'for (\w+)', line)
+            if user_match:
+                username = user_match.group(1)
+            print(f"[DEBUG] Username: {username}", flush=True)
+
+            if ip != "unknown":
+                print(
+                    f"[DEBUG] Calling log_attack with ip={ip}, username={username}, status=success", flush=True)
+                log_attack(ip, username, "success")
                 print(f"[SUCCESS] Login successful: {ip}", flush=True)
+            else:
+                print(f"[DEBUG] IP is unknown, skipping", flush=True)
 
 
 def watch_command_logs():
@@ -101,4 +119,3 @@ def watch_command_logs():
 # Start watching in background
 threading.Thread(target=watch_command_logs, daemon=True).start()
 ssh.wait()
-

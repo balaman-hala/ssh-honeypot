@@ -15,6 +15,8 @@ class AttackMonitor:
         # Track last check times
         self.last_ssh_check = datetime.now()
 
+        self.seen_attacks = set()
+
         # Create log directory
         os.makedirs(self.log_dir, exist_ok=True)
 
@@ -23,6 +25,7 @@ class AttackMonitor:
             if not os.path.exists(log_file):
                 with open(log_file, 'w') as f:
                     f.write('')
+        self.last_container_check = datetime.now()
 
     def log_ssh_attack(self, ip, username, status):
         """Log SSH attack attempt"""
@@ -63,46 +66,67 @@ class AttackMonitor:
                 time.sleep(5)
 
     def check_ssh_container(self):
-        """Check SSH container for attacks"""
+        """Check SSH container for attacks - simplified"""
         try:
-            # Use docker command directly to get logs
-            cmd = ['docker', 'logs', '--since', '5s', 'real-ssh-honeypot']
+            now = datetime.now()
+            since_seconds = int(
+                (now - self.last_container_check).total_seconds())
+
+            if since_seconds < 1:
+                since_seconds = 1
+
+            # Get logs from Docker
+            cmd = ['docker', 'logs', '--since',
+                   f'{since_seconds}s', 'real-ssh-honeypot']
             result = subprocess.run(cmd, capture_output=True, text=True)
 
+            self.last_container_check = now
+
             if result.stdout:
-                lines = result.stdout.split('\n')
-                for line in lines:
+                for line in result.stdout.strip().split('\n'):
                     line = line.strip()
-                    if line:
-                        # Try to parse as JSON attack log
-                        if line.startswith('{') and line.endswith('}'):
-                            try:
-                                data = json.loads(line)
-                                if data.get('service') == 'ssh':
-                                    # Extract data
-                                    ip = data.get('ip', 'unknown')
-                                    username = data.get('username', 'unknown')
-                                    status = data.get('status', 'attempted')
+                    if not line:
+                        continue
 
-                                    # Log the attack
-                                    if ip != 'unknown':
-                                        self.log_ssh_attack(
-                                            ip, username, status)
+                    # REMOVE [SSH] prefix if present
+                    if line.startswith('[SSH] '):
+                        line = line[6:]  # Remove "[SSH] " prefix
 
-                            except json.JSONDecodeError:
-                                # Not valid JSON, try to parse as SSH log
-                                self.parse_ssh_log_line(line)
-                            except:
-                                continue
-                        else:
-                            # Parse regular SSH log line
-                            self.parse_ssh_log_line(line)
+                    # Also check for [SUCCESS] prefix
+                    if line.startswith('[SUCCESS] '):
+                        line = line[10:]  # Remove "[SUCCESS] " prefix
+
+                    # Now process JSON lines
+                    if line.startswith('{'):
+                        try:
+                            attack = json.loads(line)
+                            if attack.get('service') == 'ssh' and attack.get('ip') != 'unknown':
+                                # Check if we've already saved this attack
+                                attack_key = json.dumps(attack)
+
+                                if attack_key not in self.seen_attacks:
+                                    self.seen_attacks.add(attack_key)
+
+                                    # Save to local log file
+                                    with open(self.ssh_log_file, 'a') as f:
+                                        f.write(json.dumps(attack) + '\n')
+
+                                    # Display it
+                                    print(
+                                        f"[ATTACK] {attack.get('ip')} -> {attack.get('username')} ({attack.get('status')})")
+                        except:
+                            # Not valid JSON, skip
+                            pass
 
         except Exception as e:
-            print(f"[!] Container check error: {e}")
+            print(f"[!] Error: {e}")
 
     def parse_ssh_log_line(self, line):
         """Parse SSH log line for attacks"""
+        # Skip debug/info lines
+        if "debug" in line.lower() or not any(keyword in line for keyword in
+                                              ["Failed password", "Invalid user", "Accepted password"]):
+            return
         status = 'attempted'
 
         if 'Failed password' in line:
@@ -110,7 +134,7 @@ class AttackMonitor:
         elif 'Invalid user' in line:
             status = 'invalid_user'
         elif 'Accepted password' in line:
-            status = 'successful_login'  # Shouldn't happen in honeypot
+            status = 'successful_login'
 
         # Extract IP and username
         ip_match = re.search(r'from (\d+\.\d+\.\d+\.\d+)', line)
